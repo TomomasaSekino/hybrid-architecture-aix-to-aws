@@ -42,7 +42,7 @@
 
 ## 4. ハイブリッド接続構成（Mermaid）
 
-``` mermaid
+```mermaid
 flowchart LR
   subgraph ONP["On-Premise"]
     AIX["AIX / PowerVM (LPAR)"]
