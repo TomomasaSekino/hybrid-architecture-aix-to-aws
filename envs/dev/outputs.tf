@@ -27,3 +27,16 @@ output "onprem_cidr_blocks" {
   value       = var.onprem_cidr_blocks
   description = "On-premise network CIDRs"
 }
+
+output "resolver_inbound_ip_addresses" {
+  value       = module.resolver.inbound_ip_addresses
+  description = "Route53 Resolver inbound endpoint IPs (configure on-prem DNS forwarders to these)"
+}
+
+output "private_zone_name" {
+  value = module.private_hosted_zone.zone_name
+}
+
+output "private_zone_id" {
+  value = module.private_hosted_zone.zone_id
+}
