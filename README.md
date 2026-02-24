@@ -117,7 +117,7 @@ flowchart LR
 -   kuromimishowkai.local
 -   On-Prem DNS（172.16.10.10 / 172.24.10.10）へ FORWARD
 
-## 6.2 Inbound Resolver（On-Prem → AWS）
+### 6.2 Inbound Resolver（On-Prem → AWS）
 
 -   On-Prem DNS が Inbound Endpoint IP に転送
 -   AWS VPC 内 Private Hosted Zone を参照可能
@@ -163,7 +163,7 @@ resolver_inbound_ip_addresses = [
 ------------------------------------------------------------------------
 
 ## 9. ディレクトリ構成
-
+```
 modules/
   ├── vpc
   ├── vpn_s2s
@@ -172,6 +172,7 @@ modules/
 
 envs/
   └── dev
+```
 
 ------------------------------------------------------------------------
 
