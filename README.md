@@ -62,37 +62,152 @@ Private Route Tables には以下を設定：
 
 ## 4. 全体構成図
 
-```mermaid
+### ① Before / Hybrid / Cloud-Native（3段階の全体像）
+
+``` mermaid
 flowchart LR
-
-  subgraph ONP["On-Premise"]
-    AIX["AIX / PowerVM"]
-    DNS1["On-Prem DNS"]
-    DC1["172.16.0.0/16"]
-    DR1["172.24.0.0/16"]
+  %% BEFORE
+  subgraph B["Before（オンプレ中心）"]
+    B1["AIX / PowerVM (LPAR)\nSAN Boot / PowerHA"]
+    B2["On-Prem Apps & MW"]
+    B3["On-Prem DB / Storage"]
+    B1 --> B2 --> B3
   end
 
-  CGW["Customer Gateway"]
-  VPN["Site-to-Site VPN"]
-  VGW["Virtual Private Gateway"]
-
-  subgraph AWS["AWS (ap-northeast-1)"]
-    subgraph VPC["VPC 10.0.0.0/16"]
-      PRI["Private Subnets"]
-      PUB["Public Subnets"]
-      RT["Private Route Tables"]
-      RES_OUT["Resolver Outbound"]
-      RES_IN["Resolver Inbound"]
-      PHZ["Private Hosted Zone\naws.kuromimishowkai.local"]
-    end
+  %% HYBRID
+  subgraph H["Hybrid（Phase 1：接続＋統合）"]
+    H1["On-Prem AIX / PowerVM\n(既存は維持)"]
+    H2["Site-to-Site VPN / (将来DX)"]
+    H3["AWS VPC\nPrivate Subnets"]
+    H4["Route 53 Resolver\nOutbound/Inbound"]
+    H5["Private Hosted Zone\naws.kuromimishowkai.local"]
+    H1 --> H2 --> H3
+    H4 --> H5
+    H1 --- H4
   end
 
-  AIX --> CGW --> VPN --> VGW --> RT
-  DNS1 --> RES_IN
-  RES_OUT --> DNS1
-  RES_IN --> PHZ
-  RT --> PRI
+  %% CLOUD NATIVE
+  subgraph C["Cloud-Native（Phase 2：段階移行後）"]
+    C1["Container / Managed Compute\n(ECS/Fargate, etc.)"]
+    C2["Managed DB\n(Aurora, etc.)"]
+    C3["Observability / Security\n(CloudWatch, Config, etc.)"]
+    C1 --> C2
+    C1 --- C3
+    C2 --- C3
+  end
+
+  B --> H --> C
+
 ```
+### 段階的アーキテクチャ進化モデル
+
+本モデルは「一気にクラウド化」ではなく、段階的な進化を前提としています。
+
+- **Before**  
+  AIX / PowerVM 上で PowerHA と SAN ブートにより可用性を確保
+
+- **Hybrid（Phase 1）**  
+  既存環境を維持したまま AWS と接続  
+  ネットワークおよび DNS 統合を確立
+
+- **Cloud-Native（Phase 2）**  
+  アプリケーションおよびデータを段階移行し、  
+  マネージドサービス中心の構成へ転換
+
+リスクを最小化しながら構造転換を実現するモデルです。
+
+
+### ② 移行シナリオの粒度（LPAR単位 → App単位 → DB単位）
+
+``` mermaid
+flowchart TB
+  subgraph P1["Step 1：LPAR単位（現行把握・接続・依存関係固定）"]
+    S1A["LPAR / OS\n(AIX / PowerVM)\nインベントリ/依存関係/通信整理"]
+    S1B["Hybrid Connectivity\nVPN / Routing / DNS"]
+    S1A --> S1B
+  end
+
+  subgraph P2["Step 2：App単位（アプリ移行・再配置）"]
+    S2A["App Tier\n移行方式選定\nRehost/Replatform/Refactor"]
+    S2B["Compute on AWS\n(ECS/Fargate/EC2)"]
+    S2C["データ接続\nOn-Prem DB ↔ AWS App\n段階的切替"]
+    S2A --> S2B --> S2C
+  end
+
+  subgraph P3["Step 3：DB単位（データ移行・最終切替）"]
+    S3A["DB Migration\nCDC/Replication/Batch"]
+    S3B["Managed DB\n(Aurora etc.)"]
+    S3C["Cutover\n性能/整合性/復旧手順\n最終確認"]
+    S3A --> S3B --> S3C
+  end
+
+  P1 --> P2 --> P3
+
+```
+### 移行の粒度を段階化する理由
+
+移行は「サーバ単位」ではなく、以下の順序で段階化します。
+
+1. **LPAR単位**  
+   現行構成・依存関係・通信経路を可視化  
+   ハイブリッド接続で安定稼働を確保
+
+2. **アプリ単位**  
+   再ホスト / 再プラットフォーム / 再設計の選定  
+   一部ワークロードからAWSへ移行
+
+3. **DB単位**  
+   データ同期（CDC等）を経て段階切替  
+   Aurora等のマネージドDBへ移行
+
+この順序により、業務停止リスクを最小化します。
+
+
+### ③ PowerHA → Aurora への思想転換（可用性の捉え方）
+
+``` mermaid
+flowchart LR
+  subgraph ONP["On-Prem（PowerHAの世界）"]
+    O1["PowerHA Cluster\nActive/Standby"]
+    O2["Shared Storage\nSAN Boot / FC"]
+    O3["Failover\nIP引継ぎ / リソース制御"]
+    O1 --- O2
+    O1 --> O3
+  end
+
+  subgraph AWS["AWS（Auroraの世界）"]
+    A1["Aurora Cluster\nWriter + Readers"]
+    A2["Storage\nDistributed / Managed"]
+    A3["Failover\nManaged failover\nMulti-AZ"]
+    A4["App Tier\nStateless化\n(原則)"]
+    A1 --- A2
+    A1 --> A3
+    A4 --- A1
+  end
+
+  ONP -->|"思想転換：\n「クラスタ制御」→「マネージド冗長」\n「共有ストレージ」→「分散管理ストレージ」"| AWS
+
+```
+### 可用性モデルの思想転換
+
+オンプレミスでは：
+
+- 共有ストレージ（SAN）
+- OSレベルクラスタ（PowerHA）
+- IP引継ぎによるフェイルオーバー
+
+によって可用性を実現します。
+
+一方、AWSでは：
+
+- 分散管理ストレージ
+- マネージドフェイルオーバー
+- アプリケーションのステートレス化
+
+へと設計思想が変化します。
+
+これは単なる「移行」ではなく、  
+**可用性モデルそのものの転換** です。
 
 ------------------------------------------------------------------------
 
