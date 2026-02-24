@@ -63,7 +63,6 @@ Private Route Tables には以下を設定：
 ## 4. 全体構成図
 
 ### ① Before / Hybrid / Cloud-Native（3段階の全体像）
-
 ``` mermaid
 flowchart LR
   %% BEFORE
@@ -97,8 +96,8 @@ flowchart LR
   end
 
   B --> H --> C
-
 ```
+
 ### 段階的アーキテクチャ進化モデル
 
 本モデルは「一気にクラウド化」ではなく、段階的な進化を前提としています。
@@ -117,8 +116,8 @@ flowchart LR
 リスクを最小化しながら構造転換を実現するモデルです。
 
 
-### ② 移行シナリオの粒度（LPAR単位 → App単位 → DB単位）
 
+### ② 移行シナリオの粒度（LPAR単位 → App単位 → DB単位）
 ``` mermaid
 flowchart TB
   subgraph P1["Step 1：LPAR単位（現行把握・接続・依存関係固定）"]
@@ -142,8 +141,8 @@ flowchart TB
   end
 
   P1 --> P2 --> P3
-
 ```
+
 ### 移行の粒度を段階化する理由
 
 移行は「サーバ単位」ではなく、以下の順序で段階化します。
@@ -163,8 +162,8 @@ flowchart TB
 この順序により、業務停止リスクを最小化します。
 
 
-### ③ PowerHA → Aurora への思想転換（可用性の捉え方）
 
+### ③ PowerHA → Aurora への思想転換（可用性の捉え方）
 ``` mermaid
 flowchart LR
   subgraph ONP["On-Prem（PowerHAの世界）"]
@@ -186,8 +185,8 @@ flowchart LR
   end
 
   ONP -->|"思想転換：\n「クラスタ制御」→「マネージド冗長」\n「共有ストレージ」→「分散管理ストレージ」"| AWS
-
 ```
+
 ### 可用性モデルの思想転換
 
 オンプレミスでは：
@@ -208,6 +207,7 @@ flowchart LR
 
 これは単なる「移行」ではなく、  
 **可用性モデルそのものの転換** です。
+
 
 ------------------------------------------------------------------------
 
